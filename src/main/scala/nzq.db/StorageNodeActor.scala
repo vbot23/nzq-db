@@ -53,12 +53,11 @@ class StorageNodeActor(localIdx: Int,
   }
 
   /**
-    * handles client write. need to propagate because write comes from client
     */
   def putClientWrite(cw: ClientWrite): Unit = {
-    log.info(s"receive client write $cw")
+    log.info(s"receive update: $cw")
     db(cw.key) = cw.value
-    val needToUpdateNeighbors = neighborsIdx.filter(j => allKeys(j).contains(cw.key))
+    val needToUpdateNeighbors = neighborsIdx.filter(j => j != localIdx && allKeys(j).contains(cw.key))
     println(needToUpdateNeighbors)
     localVc.advance(needToUpdateNeighbors)
     sender() ! WACK(cw)
@@ -68,7 +67,6 @@ class StorageNodeActor(localIdx: Int,
   def putClientWriteNoProp(cw: ClientInitWrite): Unit = {
     log.info(s"receive client write $cw")
     db(cw.key) = cw.value
-    localVc.advance(neighborsIdx)
     sender() ! WACK(cw)
   }
 
@@ -76,6 +74,7 @@ class StorageNodeActor(localIdx: Int,
     * handles update request propagated by neighbors.
     */
   def putUpdateRequest(ur: UpdateRequest): Unit = {
+    log.info(s"receive update request $ur")
     if (canUpdate(ur.vc)) {
       db(ur.key) = ur.value
       localVc.merge(ur.vc)
