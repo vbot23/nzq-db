@@ -8,6 +8,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.5.11",
   "com.typesafe.akka" %% "akka-testkit" % "2.5.11" % Test,
   "com.typesafe.akka" %% "akka-cluster" % "2.5.12",
-  "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.5"
-
+  "com.typesafe.akka" %% "akka-cluster-tools" % "2.5.5",
+  "org.scalactic" %% "scalactic" % "3.0.5",
+  "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 )

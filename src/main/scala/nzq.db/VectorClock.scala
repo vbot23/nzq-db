@@ -12,6 +12,11 @@ class VectorClock(numOfMachine: Int, localIdx: Int) extends Serializable {
       }
   }
 
+  // for test
+  def initWithArray(array: Array[Array[Int]]): Unit = {
+    vc = array
+  }
+
 
   def advance(machines: List[Int]): Unit = {
     machines.foreach(
@@ -31,6 +36,10 @@ class VectorClock(numOfMachine: Int, localIdx: Int) extends Serializable {
 
   def getElement(r: Int, c: Int): Int = vc(r)(c)
 
+  /**
+    * for testing purpose only!!
+    */
+
   def getLocalIdx: Int = localIdx
 
   /**
@@ -46,4 +55,22 @@ class VectorClock(numOfMachine: Int, localIdx: Int) extends Serializable {
   }
 
   override def toString = s"VectorClock($vc, $getLocalIdx)"
+
+  def showVc(): Unit = {
+    for (i <- vc.indices) {
+      for (j <- vc(i)) {
+        print(j + " ")
+      }
+      println()
+    }
+  }
+
+  def equals(other: VectorClock): Boolean = {
+    if (vc.length != other.vc.length) false
+    for (i <- vc.indices) {
+      if (!vc(i).sameElements(other.vc(i))) false
+    }
+    true
+  }
+
 }
