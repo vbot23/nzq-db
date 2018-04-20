@@ -1,12 +1,15 @@
 package nzq.db
 
-class VectorClock(numOfMachine: Int, localIdx: Int, neighborsIdx: List[Int], allKeys: List[List[String]]) {
+class VectorClock(numOfMachine: Int, localIdx: Int) extends Serializable {
 
   private var vc = Array.ofDim[Int](numOfMachine, numOfMachine)
   vc = vc.map(_ => Array.fill(numOfMachine)(-1))
-  for (j <- neighborsIdx) {
-    vc(j)(localIdx) = 0
-    vc(localIdx)(j) = 0
+
+  def init(machines: List[Int]): Unit = {
+      for (j <- machines) {
+        vc(j)(localIdx) = 0
+        vc(localIdx)(j) = 0
+      }
   }
 
 
@@ -30,7 +33,10 @@ class VectorClock(numOfMachine: Int, localIdx: Int, neighborsIdx: List[Int], all
 
   def getLocalIdx: Int = localIdx
 
-  def larger(other: VectorClock): Boolean = {
+  /**
+    * check if other is causal past of this vc
+    */
+  def inCausalPast(other: VectorClock): Boolean = {
     val k = other.getLocalIdx
     if (vc(k)(localIdx) != other.getElement(k, localIdx) - 1) return false
     for (j <- 0 until numOfMachine if j != k) {
@@ -38,4 +44,6 @@ class VectorClock(numOfMachine: Int, localIdx: Int, neighborsIdx: List[Int], all
     }
     true
   }
+
+  override def toString = s"VectorClock($vc, $getLocalIdx)"
 }
