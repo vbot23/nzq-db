@@ -46,7 +46,13 @@ class StorageNodeActor(keys: List[String],
     case ur: UpdateRequest => putUpdateRequest(ur)
     case cw: ClientWrite => putClientWrite(cw)
     case rw: ReadRequest => get(rw)
-    case hi: Hi => handshake(hi)
+    case hi: Hi =>
+      handshake(hi)
+      ready += 1
+      if (ready == numOfMachines) {
+        log.info("received all HiAck, good to go!")
+        localVc.init(getNeighbors.toList)
+      }
     case SubscribeAck(_) =>
       countingActor ! Ready
       log.info(s"$self subscribed to the topic")
@@ -156,7 +162,7 @@ class StorageNodeActor(keys: List[String],
     db.keys.toList
   }
 
-  def getNeighbors(): Set[Int] = {
+  def getNeighbors: Set[Int] = {
     var res = Set[Int]()
     for ((k, v) <- neighborIdx) {
       res = res ++ v.toSet
