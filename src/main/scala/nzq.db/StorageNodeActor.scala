@@ -31,6 +31,7 @@ class StorageNodeActor(keys: List[String],
   private var neighborRef = mutable.HashMap.empty[String, List[ActorRef]]  // store neighbors [key -> ref]
   private var neighborIdx = mutable.HashMap.empty[String, List[Int]]  // store neighbors [key -> ref]
   private var pendings = mutable.MutableList.empty[UpdateRequest]
+  private var ready = 0
   (keys zip values) foreach {case (k, v) => db(k) = v}
 
 
@@ -38,17 +39,23 @@ class StorageNodeActor(keys: List[String],
   // init vector clock
   private val localVc = new VectorClock(numOfMachines, localIdx)
   neighborIdx foreach {case (_, neighbors) => localVc.init(neighbors)}
-  Thread.sleep(5000)
-  mediator ! Publish(topic, Hi(db.keys.toList, localIdx, self))
+
+
 
   override def receive: Receive = {
     case ur: UpdateRequest => putUpdateRequest(ur)
     case cw: ClientWrite => putClientWrite(cw)
-    case cwi: ClientInitWrite => putClientWriteNoProp(cwi)
     case rw: ReadRequest => get(rw)
     case hi: Hi => handshake(hi)
-    case SubscribeAck(_) => log.info(s"$self subscribed to the topic")
-    case MemberUp(m) => log.info(s"$m is up!!!")
+    case SubscribeAck(_) =>
+      countingActor ! Ready
+      log.info(s"$self subscribed to the topic")
+    case AllUp =>
+      mediator ! Publish(topic, Hi(db.keys.toList, localIdx, self))
+      log.info("published hi message")
+
+    case MemberUp(m) =>
+      log.info(s"$m is up!!!")
   }
 
   def handshake(hi: Hi): Unit = {
@@ -109,15 +116,6 @@ class StorageNodeActor(keys: List[String],
   }
 
   /**
-    * for init use
-    */
-  def putClientWriteNoProp(cw: ClientInitWrite): Unit = {
-    log.info(s"receive client write $cw")
-    db(cw.key) = cw.value
-    sender() ! WACK(cw)
-  }
-
-  /**
     * handles update request propagated by neighbors.
     */
   def putUpdateRequest(ur: UpdateRequest): Unit = {
@@ -149,6 +147,27 @@ class StorageNodeActor(keys: List[String],
     log.info(s"received read request, $rw")
     sender() ! RACK(db.get(rw.key))
   }
+
+
+  /**
+    * below methods only for test purpose!!
+    */
+  def getDBkeys(): List[String] = {
+    db.keys.toList
+  }
+
+  def getNeighbors(): Set[Int] = {
+    var res = Set[Int]()
+    for ((k, v) <- neighborIdx) {
+      res = res ++ v.toSet
+    }
+    res
+  }
+
+  def getNeighborsOfKey(key: String): List[Int] = {
+    neighborIdx.getOrElse(key, List())
+  }
+
 }
 
 object StorageNodeActor {
@@ -169,6 +188,7 @@ object StorageNodeActor {
     val config = ConfigFactory.parseString(s"""
         akka.remote.netty.tcp.port=$port
         akka.remote.artery.canonical.port=$port
+        akka.cluster.roles = ["storage"]
         """)
       .withFallback(ConfigFactory.load())
 

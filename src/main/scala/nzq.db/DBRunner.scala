@@ -10,7 +10,7 @@ object DBRunner {
   private val conf = ConfigFactory.load()
   val system = ActorSystem("nzq")
   val numOfNodes = conf.getInt("numOfNodes")
-  var countActor = system.actorOf(Props[CountingActor])
+  var countActor = system.actorOf(Props(new CountingActor(numOfNodes)))
   var clients = Array[Client]()
 
   /**
@@ -33,14 +33,14 @@ object DBRunner {
       val list = line.trim.split(" ")
       list match {
         case Array("r", i, k) => clients(i.toInt).get(k)
-        case Array("w", i, k, v) => clients(i.toInt).update(k, v.toInt)
+        case Array("w", i, k, v) => clients(i.toInt).write(k, v.toInt)
         case _ => println("invalid command, try again")
       }
     }
   }
 
   def main(args: Array[String]): Unit = {
-    CountingActor.main(Seq("2551", "Counter").toArray) // cluster seed
+    CountingActor.create(2551, "Counter", numOfNodes) // cluster seed
     initNodes()
     shell()
   }

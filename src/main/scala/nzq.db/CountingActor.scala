@@ -1,31 +1,41 @@
 package nzq.db
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.MemberUp
+import akka.cluster.pubsub.DistributedPubSub
+import akka.cluster.pubsub.DistributedPubSubMediator.{Publish, Subscribe}
 import akka.event.Logging
 import com.typesafe.config.ConfigFactory
 
-class CountingActor extends Actor {
+class CountingActor(numOfMachines: Int) extends Actor {
   val log = Logging(context.system, this)
   var counter = 0
+  var ready = 0
 
   val cluster = Cluster(context.system)
-//  override def preStart(): Unit = cluster.subscribe(self, classOf[MemberUp])
+  val mediator = DistributedPubSub(context.system).mediator
+  val topic = "discovery"
   override def postStop(): Unit = cluster.unsubscribe(self)
 
   override def receive: Receive = {
     case IncreaseCounter =>
       counter += 1
       log.info(s"total number of update messages sent is $counter")
-    case _ => log.warning("counting actor receives invalid message")
+    case Ready =>
+      ready += 1
+      log.info(s"received $sender, ready is $ready")
+      if (ready == numOfMachines) {
+        Thread.sleep(20000)
+        mediator ! Publish(topic, AllUp)
+        log.info("published allup!!!")
+      }
+    case m => log.warning(s"counting actor receives invalid message $m")
   }
 
 }
 object CountingActor {
-  def main(args: Array[String]): Unit = {
-    val port = args(0)
-    val name = args(1)
+  def create(port: Int, name: String, numOfMachines: Int): ActorRef = {
     val config = ConfigFactory.parseString(
       s"""
       akka.remote.netty.tcp.port=$port
@@ -34,6 +44,6 @@ object CountingActor {
       .withFallback(ConfigFactory.load())
 
     val system = ActorSystem("nzq", config)
-    system.actorOf(Props[CountingActor], name)
+    system.actorOf(Props(new CountingActor(numOfMachines)), name)
   }
 }

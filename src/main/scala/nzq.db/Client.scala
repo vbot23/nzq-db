@@ -26,16 +26,6 @@ class Client(node: ActorRef) {
 
   def write(k: String, v: Int): Future[Any] = {
     implicit val timeout: Timeout = Timeout(1 seconds)
-    val f = node ? ClientInitWrite(k, v)
-    f onComplete {
-      case Success((WACK(cw))) => println(s"received WACK $cw from $node")
-      case Failure(e) => println(e)
-    }
-    f
-  }
-
-  def update(k: String, v: Int): Future[Any] = {
-    implicit val timeout: Timeout = Timeout(1 seconds)
     val f = node ? ClientWrite(k, v)
     f onComplete {
       case Success((WACK(cw))) => println(s"received WACK $cw from $node")
