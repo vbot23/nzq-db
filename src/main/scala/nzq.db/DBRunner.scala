@@ -2,6 +2,7 @@ package nzq.db
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.typesafe.config.{Config, ConfigFactory}
+import util.control.Breaks._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -66,6 +67,7 @@ object DBRunner {
       clients = clients :+ new Client(node, assignments(i))
     }
     printAjacencyMat(mat)
+    println(s"db content is $assignments")
     calProbabilityOfAnEdge(numOfMachines, maxCliqueSize, numOfKeys)
   }
 
@@ -93,11 +95,18 @@ object DBRunner {
     */
   def benchmarking(times: Int): Unit = {
     println("starts benchmarking.........")
-    for (i <- 0 until times) {
-      val idx = random.nextInt(clients.length)
-      val k = random.shuffle(clients(idx).getKeys).take(1).head
-      println(s"writing $k with value $i to machine $i.")
-      clients(idx).write(k, i)
+    var i = 0
+    while (i < times) {
+      breakable {
+        val idx = random.nextInt(clients.length)
+        if (clients(idx).getKeys.isEmpty) {
+          break
+        }
+        val k = random.shuffle(clients(idx).getKeys).take(1).head
+        println(s"writing $k with value $i to machine $i.")
+        clients(idx).write(k, i)
+        i += 1
+      }
     }
   }
 
@@ -118,7 +127,7 @@ object DBRunner {
 
   def main(args: Array[String]): Unit = {
     CountingActor.create(2551, "Counter", numOfNodes) // cluster seed
-    initNodesBenchMark(3, 5, 2)
+    initNodesBenchMark(5, 5,5)
     // ensure every node is up
     Thread.sleep(30000)
     println(
@@ -134,7 +143,7 @@ object DBRunner {
         |                                                                     |_|
         |
       """.stripMargin)
-    benchmarking(1)
+    benchmarking(500)
     //    initNodes()
     shell()
   }
