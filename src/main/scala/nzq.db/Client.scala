@@ -10,7 +10,7 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class Client(node: ActorRef) {
+class Client(node: ActorRef, keys: List[String]) {
   def get(k: String): Future[Any] = {
     implicit val timeout: Timeout = Timeout(1 seconds)
     val f = node ? ReadRequest(k)
@@ -33,4 +33,6 @@ class Client(node: ActorRef) {
     }
     f
   }
+
+  def getKeys = keys
 }

@@ -5,6 +5,7 @@ import akka.testkit.{ImplicitSender, TestActorRef, TestActors, TestKit}
 import com.typesafe.config.ConfigFactory
 import org.scalatest._
 
+// test has to be run one at a time due to the reason of
 class StorageNodeActorTest extends TestKit(ActorSystem("nzq")) with FlatSpecLike
     with ImplicitSender
     with Matchers
